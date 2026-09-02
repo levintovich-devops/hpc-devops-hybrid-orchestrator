@@ -34,6 +34,10 @@ Vagrant.configure("2") do |config|
           salt.minion_config = "salt/config/builder-minion"
           salt.minion_id = machine[:name]
         end
+        node.trigger.after :up do |trigger|
+          trigger.only_on = "builder"
+          trigger.run_remote = { inline: "sudo systemctl poweroff --no-block" }
+        end
       end
 
       if machine[:name] == "controller"
