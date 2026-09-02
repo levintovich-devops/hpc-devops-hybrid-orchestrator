@@ -34,6 +34,10 @@ Verified facts:
 - Salt installs the base build packages from Pillar.
 - Salt installs Podman.
 - Salt creates `/artifacts/slurm-debs` and `/artifacts/images`.
+- Builder is configured with 4096 MB RAM and 4 CPUs in the Vagrant machines data structure.
+- The original VM had about 1 GB RAM and 2 CPUs.
+- Resources were increased to support reliable Slurm source compilation.
+- Verification after `vagrant reload` showed 4 CPUs and 3.8 GiB RAM.
 - The initial Builder highstate succeeded with `Succeeded: 4`, `Changed: 4`, and `Failed: 0`.
 - The first idempotency rerun exposed the Windows shared-folder permission problem and failed for two directory mode checks.
 - After removing `dir_mode`, the final rerun completed with `Succeeded: 4`, `Failed: 0`, and no changes, confirming idempotency.
@@ -134,7 +138,7 @@ The current repository state demonstrates the Vagrant foundation and verified Bu
 
 ## 7. AI usage
 
-GitHub Copilot generated the Vagrant loop, the Salt State, and the Pillar structure to automate configuration and avoid duplication. The configuration was manually reviewed and tested. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
+GitHub Copilot added the data-driven resource configuration for Builder and generated the Vagrant loop, Salt State, and Pillar structure to automate configuration and avoid duplication. The configuration was manually reviewed and validated. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
 
 ## 8. Summary
 

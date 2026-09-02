@@ -2,7 +2,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
 
   machines = [
-    { name: "builder", ip: "192.168.56.10" },
+    { name: "builder", ip: "192.168.56.10", memory: 4096, cpus: 4 },
     { name: "controller", ip: "192.168.56.11" },
     { name: "compute", ip: "192.168.56.12" }
   ]
@@ -15,6 +15,13 @@ Vagrant.configure("2") do |config|
       node.vm.hostname = machine[:name]
       node.vm.network "private_network", ip: machine[:ip]
       node.vm.synced_folder "./artifacts", "/artifacts"
+
+      node.vm.provider "virtualbox" do |vb|
+        if machine[:name] == "builder"
+          vb.memory = machine[:memory]
+          vb.cpus = machine[:cpus]
+        end
+      end
 
       if machine[:name] == "builder"
         node.vm.synced_folder "./salt/roots", "/srv/salt"
