@@ -14,7 +14,7 @@ The full technical assignment is a future-state design and automation plan, not 
 
 ## 2. Current implementation status
 
-The verified implementation includes the Vagrant three-node environment and the current Builder bootstrap progress. It does not claim that Builder or Phase 1 is complete.
+The verified implementation includes the Vagrant three-node environment and the Builder Slurm DEB build path. It does not claim that the full Phase 1 workflow is complete.
 
 Verified facts:
 
@@ -38,6 +38,36 @@ Verified facts:
 - The original VM had about 1 GB RAM and 2 CPUs.
 - Resources were increased to support reliable Slurm source compilation.
 - Verification after `vagrant reload` showed 4 CPUs and 3.8 GiB RAM.
+- The verified Slurm 26.05.3 DEB build was produced on Builder.
+- The Builder Slurm build is run with:
+
+```bash
+vagrant provision builder
+```
+
+- The build uses parallel compilation across all Builder CPUs with:
+
+```bash
+debuild -b -uc -us -j$(nproc)
+```
+
+- Generated artifacts are stored in both locations:
+
+```text
+host: artifacts/slurm-debs/26.05.3
+VM: /artifacts/slurm-debs/26.05.3
+```
+
+- The checksum verification command is:
+
+```bash
+vagrant ssh builder -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256SUMS"
+```
+
+- Every DEB must return `OK` during checksum verification.
+- All generated DEBs passed checksum verification.
+- The `.complete` marker prevents the Slurm build from being rebuilt unnecessarily.
+- The idempotency rerun completed with `Failed: 0` and no changes.
 - The initial Builder highstate succeeded with `Succeeded: 4`, `Changed: 4`, and `Failed: 0`.
 - The first idempotency rerun exposed the Windows shared-folder permission problem and failed for two directory mode checks.
 - After removing `dir_mode`, the final rerun completed with `Succeeded: 4`, `Failed: 0`, and no changes, confirming idempotency.
@@ -83,6 +113,9 @@ vagrant up builder
 vagrant provision builder
 ```
 
+- `vagrant up builder` starts the Builder VM and provisions it on the first run.
+- `vagrant provision builder` reruns Salt provisioning on an existing Builder VM.
+
 ### Start the environment
 
 ```bash
@@ -113,6 +146,14 @@ vagrant ssh compute -c "ping -c 2 192.168.56.10 && ping -c 2 192.168.56.11"
 
 These checks were performed successfully with zero packet loss in all directions.
 
+### Verify Slurm DEB artifacts
+
+```bash
+vagrant ssh builder -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256SUMS"
+```
+
+Every DEB must return `OK`.
+
 ### Stop the environment
 
 ```bash
@@ -123,22 +164,20 @@ vagrant halt
 
 The following items are not implemented in the current verified state and should not be interpreted as complete:
 
-- SaltStack automation beyond the verified Builder bootstrap
-- Slurm compilation
 - Container image build
-- Artifact export to the shared folder
 - Automatic Builder shutdown
-- Controller and compute service orchestration
-- K3s cluster setup
-- Prometheus monitoring stack
-- Grafana dashboard configuration
-- Metrics Gateway service
+- Controller and Compute Salt orchestration
+- Slurm installation
+- K3s
+- Prometheus
+- Grafana
+- Metrics Gateway
 
-The current repository state demonstrates the Vagrant foundation and verified Builder bootstrap only; the remaining infrastructure and application layers described in `TASK.md` are still pending.
+The current repository state demonstrates the Vagrant foundation, verified Builder bootstrap, and verified Slurm 26.05.3 DEB packaging on Builder. The remaining infrastructure and application layers described in `TASK.md` are still pending.
 
 ## 7. AI usage
 
-GitHub Copilot added the data-driven resource configuration for Builder and generated the Vagrant loop, Salt State, and Pillar structure to automate configuration and avoid duplication. The configuration was manually reviewed and validated. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
+GitHub Copilot generated the data-driven Vagrant machine loop and Builder resource configuration. It also generated the Pillar values, Salt state, and Bash build script to download, verify, compile, and export separate Slurm DEBs. The Slurm automation was used to make source compilation reproducible, validate package integrity, export reusable DEBs, and avoid unnecessary rebuilds. The output was manually reviewed and corrected for version deduplication, noninteractive dependency installation, parallel compilation, required-package validation, checksums, and idempotency. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
 
 ## 8. Summary
 
