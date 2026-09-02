@@ -14,4 +14,3 @@ builder-artifact-directories:
         - /artifacts/slurm-debs
         - /artifacts/images
     - makedirs: True
-    - dir_mode: 755

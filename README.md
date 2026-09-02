@@ -14,7 +14,7 @@ The full technical assignment is a future-state design and automation plan, not 
 
 ## 2. Current implementation status
 
-The current verified implementation is limited to the Vagrant base environment.
+The verified implementation includes the Vagrant three-node environment and the current Builder bootstrap progress. It does not claim that Builder or Phase 1 is complete.
 
 Verified facts:
 
@@ -28,7 +28,15 @@ Verified facts:
 - `vagrant up` created all three VMs.
 - `vagrant status` showed all three machines running.
 - Full network connectivity was tested in every direction with zero packet loss.
+- `./artifacts` is mounted as `/artifacts` on all three nodes and was tested from builder, controller, and compute.
 - `vagrant halt` is the supported command to stop the environment.
+- Builder uses Vagrant's built-in Salt provisioner in masterless mode because the builder must configure itself before the controller is started.
+- Salt installs the base build packages from Pillar.
+- Salt installs Podman.
+- Salt creates `/artifacts/slurm-debs` and `/artifacts/images`.
+- The initial Builder highstate succeeded with `Succeeded: 4`, `Changed: 4`, and `Failed: 0`.
+- The first idempotency rerun exposed the Windows shared-folder permission problem and failed for two directory mode checks.
+- After removing `dir_mode`, the final rerun completed with `Succeeded: 4`, `Failed: 0`, and no changes, confirming idempotency.
 
 ## 3. Node table
 
@@ -62,6 +70,13 @@ From the repository root:
 
 ```bash
 vagrant validate
+```
+
+### Builder provisioning
+
+```bash
+vagrant up builder
+vagrant provision builder
 ```
 
 ### Start the environment
@@ -104,18 +119,22 @@ vagrant halt
 
 The following items are not implemented in the current verified state and should not be interpreted as complete:
 
-- SaltStack automation
-- Slurm deployment and scheduling
+- SaltStack automation beyond the verified Builder bootstrap
+- Slurm compilation
+- Container image build
+- Artifact export to the shared folder
+- Automatic Builder shutdown
+- Controller and compute service orchestration
 - K3s cluster setup
 - Prometheus monitoring stack
 - Grafana dashboard configuration
 - Metrics Gateway service
 
-The current repository state demonstrates the Vagrant foundation only; the remaining infrastructure and application layers described in `TASK.md` are still pending.
+The current repository state demonstrates the Vagrant foundation and verified Builder bootstrap only; the remaining infrastructure and application layers described in `TASK.md` are still pending.
 
 ## 7. AI usage
 
-GitHub Copilot created the initial non-duplicated Vagrantfile structure. That structure was then manually reviewed and functionally tested in the working environment. The resulting configuration was validated through `vagrant validate`, `vagrant up`, `vagrant status`, and direct network connectivity checks.
+GitHub Copilot generated the Vagrant loop, the Salt State, and the Pillar structure to automate configuration and avoid duplication. The configuration was manually reviewed and tested. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
 
 ## 8. Summary
 
