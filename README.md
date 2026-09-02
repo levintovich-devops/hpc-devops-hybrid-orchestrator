@@ -14,7 +14,7 @@ The full technical assignment is a future-state design and automation plan, not 
 
 ## 2. Current implementation status
 
-The verified implementation includes the Vagrant three-node environment and the Builder Slurm DEB build path. It does not claim that the full Phase 1 workflow is complete.
+The verified implementation includes the Vagrant three-node environment, the Builder Slurm DEB build path, and the verified Metrics Gateway image build and export. It does not claim that the full Phase 1 workflow is complete.
 
 Verified facts:
 
@@ -71,6 +71,32 @@ vagrant ssh builder -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256S
 - The initial Builder highstate succeeded with `Succeeded: 4`, `Changed: 4`, and `Failed: 0`.
 - The first idempotency rerun exposed the Windows shared-folder permission problem and failed for two directory mode checks.
 - After removing `dir_mode`, the final rerun completed with `Succeeded: 4`, `Failed: 0`, and no changes, confirming idempotency.
+- The verified Metrics Gateway image is `localhost/metrics-gateway:0.1.0`.
+- The Builder image build is triggered automatically with:
+
+```bash
+vagrant provision builder
+```
+
+- The Podman build runs rootless as the Pillar-defined `vagrant` user.
+- Generated image artifacts are stored in both locations:
+
+```text
+host: artifacts/images/metrics-gateway-0.1.0.tar
+VM: /artifacts/images/metrics-gateway-0.1.0.tar
+```
+
+- The archive verification command is:
+
+```bash
+podman load --input /artifacts/images/metrics-gateway-0.1.0.tar
+```
+
+- `PUT /update-metric` returned `200`.
+- `GET /metrics` returned valid Prometheus text format.
+- Invalid metric names returned `400`.
+- Repeated provisioning made no changes.
+- The SHA256 of the tar was identical before and after rerunning provisioning.
 
 ## 3. Node table
 
@@ -154,6 +180,14 @@ vagrant ssh builder -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256S
 
 Every DEB must return `OK`.
 
+### Verify Metrics Gateway image archive
+
+```bash
+vagrant ssh builder -c "podman load --input /artifacts/images/metrics-gateway-0.1.0.tar"
+```
+
+The archive should load successfully and expose the `localhost/metrics-gateway:0.1.0` image.
+
 ### Stop the environment
 
 ```bash
@@ -164,20 +198,19 @@ vagrant halt
 
 The following items are not implemented in the current verified state and should not be interpreted as complete:
 
-- Container image build
 - Automatic Builder shutdown
 - Controller and Compute Salt orchestration
 - Slurm installation
 - K3s
 - Prometheus
 - Grafana
-- Metrics Gateway
+- Metrics Gateway service deployment
 
-The current repository state demonstrates the Vagrant foundation, verified Builder bootstrap, and verified Slurm 26.05.3 DEB packaging on Builder. The remaining infrastructure and application layers described in `TASK.md` are still pending.
+The current repository state demonstrates the Vagrant foundation, verified Builder bootstrap, verified Slurm 26.05.3 DEB packaging on Builder, and verified Metrics Gateway image build/export automation. The remaining infrastructure and application layers described in `TASK.md` are still pending.
 
 ## 7. AI usage
 
-GitHub Copilot generated the data-driven Vagrant machine loop and Builder resource configuration. It also generated the Pillar values, Salt state, and Bash build script to download, verify, compile, and export separate Slurm DEBs. The Slurm automation was used to make source compilation reproducible, validate package integrity, export reusable DEBs, and avoid unnecessary rebuilds. The output was manually reviewed and corrected for version deduplication, noninteractive dependency installation, parallel compilation, required-package validation, checksums, and idempotency. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
+GitHub Copilot generated the data-driven Vagrant machine loop and Builder resource configuration. The loop was used to avoid duplicated VM definitions and allocate sufficient Builder resources. It also generated the Gateway build context and Salt image automation. The Gateway image automation was used to produce a reproducible versioned artifact for later Helm deployment after Builder shutdown. The output was manually reviewed and corrected for the API output, labels, required `import sys`, duplicated values, unsafe export handling, and rootful Podman execution. The Slurm automation was used to make source compilation reproducible, validate package integrity, export reusable DEBs, and avoid unnecessary rebuilds. The output was manually reviewed and corrected for version deduplication, noninteractive dependency installation, parallel compilation, required-package validation, checksums, and idempotency. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
 
 ## 8. Summary
 
