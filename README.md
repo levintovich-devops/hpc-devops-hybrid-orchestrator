@@ -97,6 +97,22 @@ podman load --input /artifacts/images/metrics-gateway-0.1.0.tar
 - Invalid metric names returned `400`.
 - Repeated provisioning made no changes.
 - The SHA256 of the tar was identical before and after rerunning provisioning.
+- The complete Builder workflow is:
+
+```bash
+vagrant up builder --provision
+```
+
+- Vagrant starts Builder, runs the Salt highstate, completes artifact provisioning, and then runs the Builder-specific after `:up` trigger.
+- The trigger executes inside Builder:
+
+```bash
+sudo systemctl poweroff --no-block
+```
+
+- The verified final state was: `builder poweroff (virtualbox)`.
+- `vagrant provision builder` is only usable while Builder is already running.
+- The Phase 1 Builder artifact workflow is now complete.
 
 ## 3. Node table
 
@@ -135,12 +151,11 @@ vagrant validate
 ### Builder provisioning
 
 ```bash
-vagrant up builder
-vagrant provision builder
+vagrant up builder --provision
 ```
 
-- `vagrant up builder` starts the Builder VM and provisions it on the first run.
-- `vagrant provision builder` reruns Salt provisioning on an existing Builder VM.
+- This single command starts Builder, runs the complete Salt artifact workflow, and automatically powers Builder off after success.
+- `vagrant provision builder` can only be used when Builder is already running.
 
 ### Start the environment
 
@@ -198,7 +213,6 @@ vagrant halt
 
 The following items are not implemented in the current verified state and should not be interpreted as complete:
 
-- Automatic Builder shutdown
 - Controller and Compute Salt orchestration
 - Slurm installation
 - K3s
@@ -206,11 +220,11 @@ The following items are not implemented in the current verified state and should
 - Grafana
 - Metrics Gateway service deployment
 
-The current repository state demonstrates the Vagrant foundation, verified Builder bootstrap, verified Slurm 26.05.3 DEB packaging on Builder, and verified Metrics Gateway image build/export automation. The remaining infrastructure and application layers described in `TASK.md` are still pending.
+The current repository state demonstrates the Vagrant foundation, verified Builder bootstrap, verified Slurm 26.05.3 DEB packaging on Builder, and verified Metrics Gateway image build/export automation. The Phase 1 Builder artifact workflow is complete, and the remaining infrastructure and application layers described in `TASK.md` are still pending. Controller, compute, and later phases are not complete.
 
 ## 7. AI usage
 
-GitHub Copilot generated the data-driven Vagrant machine loop and Builder resource configuration. The loop was used to avoid duplicated VM definitions and allocate sufficient Builder resources. It also generated the Gateway build context and Salt image automation. The Gateway image automation was used to produce a reproducible versioned artifact for later Helm deployment after Builder shutdown. The output was manually reviewed and corrected for the API output, labels, required `import sys`, duplicated values, unsafe export handling, and rootful Podman execution. The Slurm automation was used to make source compilation reproducible, validate package integrity, export reusable DEBs, and avoid unnecessary rebuilds. The output was manually reviewed and corrected for version deduplication, noninteractive dependency installation, parallel compilation, required-package validation, checksums, and idempotency. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
+GitHub Copilot generated the data-driven Vagrant machine loop and Builder resource configuration. The loop was used to avoid duplicated VM definitions and allocate sufficient Builder resources. It also generated the Gateway build context and Salt image automation. The Gateway image automation was used to produce a reproducible versioned artifact for later Helm deployment after Builder shutdown. The shutdown trigger was generated to release Builder resources after artifact creation. Manual review corrected `trigger.run` to `trigger.run_remote` so shutdown runs inside Builder instead of on the Windows host. The output was manually reviewed and corrected for the API output, labels, required `import sys`, duplicated values, unsafe export handling, and rootful Podman execution. The Slurm automation was used to make source compilation reproducible, validate package integrity, export reusable DEBs, and avoid unnecessary rebuilds. The output was manually reviewed and corrected for version deduplication, noninteractive dependency installation, parallel compilation, required-package validation, checksums, and idempotency. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
 
 ## 8. Summary
 
