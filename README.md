@@ -142,10 +142,9 @@ The credentials are stored in a Kubernetes Secret and are not committed to Git.
 1. Log in to Grafana.
 2. Open **Dashboards**.
 3. Select **Node Exporter Full**.
-4. Confirm dashboard ID `1860` and pinned revision `45`.
-5. Select datasource `Prometheus`.
-6. Select job `node-exporter`.
-7. Select the required `Nodename` or `Instance`.
+4. Select datasource `Prometheus`.
+5. Select job `node-exporter`.
+6. Select the required `Nodename` or `Instance`.
 
 Controller and Compute metrics must both be available.
 
