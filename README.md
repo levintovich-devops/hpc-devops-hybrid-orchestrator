@@ -1,98 +1,49 @@
 # HPC DevOps Hybrid Orchestrator
 
-## 1. Project overview
+## Quick access
 
-This project is based on the requirements in `TASK.md` and is intended to build a reproducible hybrid HPC and cloud-native observability environment. The target design includes:
+Grafana: https://grafana.local
 
-- a builder node for compiling and packaging artifacts,
-- a controller node for central orchestration services,
-- a compute node for execution and Kubernetes-based monitoring,
-- a private-network Vagrant topology for multi-node testing,
-- later automation with SaltStack, Slurm, K3s, Prometheus, Grafana, and a custom metrics gateway.
+This URL works after the Windows hosts-file configuration described in [Access Grafana from Windows and Chrome](#access-grafana-from-windows-and-chrome).
 
-The full technical assignment is a future-state design and automation plan, not a completed implementation.
+## Project status
 
-## 2. Current implementation status
+The currently verified implementation includes:
 
-Phase 1: Environment & Artifacts is complete and verified.
+- Phase 1: Environment & Artifacts, complete and verified.
+- Phase 2: Configuration Management with SaltStack, complete and verified.
+- Phase 3: Observability and Orchestration with K3s, Helm, Prometheus, and Grafana, complete and verified.
 
-Verified Phase 1 results:
+Phase 4 Helm deployment of the Metrics Gateway and the Phase 5 functional Slurm reporting loop are not implemented. The complete technical assignment is not finished.
 
-- Three Ubuntu 22.04 Vagrant nodes exist on a private network with static IPs:
-  - builder: 192.168.56.10
-  - controller: 192.168.56.11
-  - compute: 192.168.56.12
-- Controller and Compute are provisioned using Vagrant's built-in Salt provisioner.
-- Controller runs Salt Master using `salt/config/controller-master` with `auto_accept` enabled.
-- Controller Salt Master was verified active.
-- Controller Salt version `3008.2 Argon` was verified.
-- Compute runs Salt Minion and receives the Controller IP from the Vagrant machines data structure.
-- Compute Salt Minion was verified active.
-- Controller successfully received `compute: True` from `salt 'compute' test.ping`.
-- Builder installs build dependencies and Podman.
-- Builder compiles Slurm 26.05.3 into separate DEB packages.
-- Builder exports the Slurm DEBs and the `SHA256SUMS` file to the shared artifacts directory.
-- Builder builds and exports the Metrics Gateway image archive.
-- Builder stores all artifacts in `/artifacts` and retains them in the shared artifacts directory.
-- Builder automatically powers off after successful provisioning.
-- Resource allocation is verified as:
-  - Builder: 4096 MB RAM, 4 CPUs
-  - Controller: 2048 MB RAM, 2 CPUs
-  - Compute: 4096 MB RAM, 2 CPUs
-- The Controller Slurm daemons, Controller Podman, Compute `slurmd`, and K3s are target node roles identified in Phase 1. Their installation and configuration belong to Phase 2 and Phase 3 as explicitly described in `TASK.md`.
-- The verified Slurm build uses parallel compilation across all Builder CPUs with:
+## Architecture
 
-```bash
-debuild -b -uc -us -j$(nproc)
-```
+| Node | Address | Verified role | Resources |
+| --- | --- | --- | --- |
+| Builder | 192.168.56.10 | Ephemeral artifact builder; automatically powers off after successful builds | 4096 MB RAM, 4 CPUs |
+| Controller | 192.168.56.11 | Salt Master, Podman, Controller Node Exporter, MariaDB, Munge, slurmdbd, and slurmctld | 2048 MB RAM, 2 CPUs |
+| Compute | 192.168.56.12 | Salt Minion, Munge, slurmd, single-node K3s, kube-prometheus-stack, and Grafana | 4096 MB RAM, 2 CPUs |
 
-- The verified Slurm artifact directory is:
+The nodes use the existing private Vagrant network. Shared build and deployment artifacts are mounted at `/artifacts` on the VMs.
 
-```text
-host: artifacts/slurm-debs/26.05.3
-VM: /artifacts/slurm-debs/26.05.3
-```
+The Builder is a masterless Salt node and remains ephemeral. The Controller is a Salt Master without a Salt Minion service. The Compute node is the only Salt Minion and receives its states through the Controller.
 
-- The verified Metrics Gateway image archive location is:
+## Prerequisites
 
-```text
-host: artifacts/images/metrics-gateway-0.1.0.tar
-VM: /artifacts/images/metrics-gateway-0.1.0.tar
-```
+Install or make available on the Windows host:
 
-- `PUT /update-metric` returned `200`.
-- `GET /metrics` returned valid Prometheus text format.
-- Invalid metric names returned `400`.
-- Repeated Builder provisioning produced no changes. The SHA256 hash of the Metrics Gateway image archive remained identical before and after the rerun.
-- The Builder automatic shutdown was verified and the final VM state was `builder poweroff (virtualbox)`.
-
-## 3. Node table
-
-| Name | IP Address | Current Phase 1 state |
-| --- | --- | --- |
-| builder | 192.168.56.10 | Artifact build completed; VM automatically powered off |
-| controller | 192.168.56.11 | Salt Master; running |
-| compute | 192.168.56.12 | Salt Minion; running |
-
-## 4. Prerequisites
-
-Before starting the Vagrant environment, ensure the following are available on the host machine:
-
-- Vagrant 2.4.9 or compatible Vagrant version
-- A supported virtualization provider such as VirtualBox
-- A working local network environment for private Vagrant networking
-- Git for repository management
-
-Install Vagrant on Windows:
+- Vagrant 2.4.9 or a compatible version
+- VirtualBox or another supported Vagrant provider
+- Git
 
 ```powershell
 winget install Hashicorp.Vagrant
 vagrant --version
 ```
 
-## 5. Phase 1 deployment
+## Deployment through Vagrant
 
-From the repository root:
+Run the complete deployment from the repository root:
 
 ```bash
 vagrant validate
@@ -106,46 +57,190 @@ Expected final state:
 - controller: running
 - compute: running
 
-### Validation commands
+For reprovisioning existing running nodes, use this order:
 
 ```bash
-vagrant ssh controller -c "sudo systemctl is-active salt-master"
-vagrant ssh compute -c "sudo systemctl is-active salt-minion"
-vagrant ssh controller -c "sudo salt 'compute' test.ping"
+vagrant provision controller
+vagrant provision compute
+```
+
+Application installation and configuration must be performed through Vagrant and Salt automation. Direct SSH commands shown below are for validation and troubleshooting only.
+
+## Builder artifacts
+
+Run the complete Builder workflow from the repository root:
+
+```bash
+vagrant up builder --provision
+```
+
+Builder automatically powers off after successful artifact creation.
+
+Slurm artifacts:
+
+```text
+host: artifacts/slurm-debs/26.05.3
+VM: /artifacts/slurm-debs/26.05.3
+```
+
+Metrics Gateway image:
+
+```text
+host: artifacts/images/metrics-gateway-0.1.0.tar
+VM: /artifacts/images/metrics-gateway-0.1.0.tar
+```
+
+Because Builder is powered off, verify shared artifacts through Controller:
+
+```bash
 vagrant ssh controller -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256SUMS"
 vagrant ssh controller -c "test -s /artifacts/images/metrics-gateway-0.1.0.tar && echo 'Metrics Gateway image archive: OK'"
 ```
 
-Expected results:
+## Access Grafana from Windows and Chrome
 
-- Salt Master and Salt Minion return `active`.
-- Salt `test.ping` returns `compute: True`.
-- Every Slurm DEB checksum returns `OK`.
-- The Metrics Gateway image archive check returns `OK`.
+The private Vagrant hostname is not registered in public DNS. Windows must resolve `grafana.local` locally.
 
-`vagrant provision builder` can only be used while Builder is already running.
+Open Windows PowerShell as Administrator and run:
 
-## 6. Not implemented yet
+```powershell
+$hostsFile = "$env:SystemRoot\System32\drivers\etc\hosts"
+if (-not (Select-String -Path $hostsFile -Pattern '^\s*192\.168\.56\.12\s+grafana\.local\s*$' -Quiet)) {
+    Add-Content -Path $hostsFile -Value "`r`n192.168.56.12 grafana.local"
+}
+ipconfig /flushdns
+```
 
-The following Phase 2 and later work is not implemented and should not be interpreted as complete:
+Then open:
 
-- Controller Podman and Node Exporter
-- MariaDB
-- synchronized Munge
-- Slurm installation and configuration
-- slurmctld, slurmdbd, and slurmd
-- K3s
-- Prometheus and Grafana
-- Metrics Gateway Helm deployment
-- Phase 5 Slurm reporting job
+```text
+https://grafana.local
+```
 
-No later component is claimed as implemented.
+Chrome may display a certificate warning because the local Traefik ingress uses a lab certificate. This is expected only for this private lab environment.
 
-## 7. AI usage
+## Grafana credentials
 
-GitHub Copilot generated the data-driven Vagrant machine definitions, resource allocation, Salt provisioning configuration, Builder states, Slurm build automation, Metrics Gateway build context, image export workflow, and automatic Builder shutdown trigger. These changes were used to eliminate duplicated configuration, make artifact production reproducible, and ensure that Builder releases its resources after completing the builds. All generated code was manually reviewed and tested. Manual corrections included replacing `trigger.run` with `trigger.run_remote`, removing the unapproved external `vagrant-salt` plugin, fixing malformed Salt JSON configuration, handling Windows shared-folder permissions, deriving repeated values from Pillar, enabling noninteractive and parallel Slurm compilation, validating required DEB packages and checksums, exporting the container image safely through a temporary file, producing valid Prometheus metrics with labels, adding the required `import sys`, and running the Podman image build rootless as the Pillar-defined `vagrant` user after the rootful build failed. Idempotency was verified by rerunning the Salt provisioning and confirming that no unnecessary rebuilds or artifact changes occurred.
+Do not hardcode or document the Grafana password. From the repository root, connect to Compute:
 
-## 8. Summary
+```bash
+vagrant ssh compute
+```
 
-Phase 1: Environment & Artifacts is complete and verified. The Builder artifact workflow and Controller/Compute Salt provisioning are in place and validated. The remaining work is limited to the Phase 2 and later components described in `TASK.md`.
+After connecting to Compute, retrieve the credentials:
 
+```bash
+
+sudo k3s kubectl get secret monitoring-grafana -n monitoring -o jsonpath='{.data.admin-user}' | base64 -d; echo
+sudo k3s kubectl get secret monitoring-grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
+```
+
+The credentials are stored in a Kubernetes Secret and are not committed to Git.
+
+## Grafana dashboard
+
+1. Log in to Grafana.
+2. Open **Dashboards**.
+3. Select **Node Exporter Full**.
+4. Confirm dashboard ID `1860` and pinned revision `45`.
+5. Select datasource `Prometheus`.
+6. Select job `node-exporter`.
+7. Select the required `Nodename` or `Instance`.
+
+Controller and Compute metrics must both be available.
+
+## Validation
+
+The following commands validate the verified services and integrations.
+
+From Controller SSH:
+
+```bash
+sudo salt 'compute' test.ping
+
+for service in salt-master munge mariadb slurmdbd slurmctld node-exporter; do printf '%s: ' "$service"; systemctl is-active "$service"; done
+
+sinfo -N -l
+
+curl -fsS http://127.0.0.1:9100/metrics | head
+```
+
+From Compute SSH:
+
+```bash
+for service in salt-minion munge slurmd k3s; do printf '%s: ' "$service"; systemctl is-active "$service"; done
+
+sudo k3s kubectl get nodes -o wide
+sudo k3s kubectl get pods -n monitoring
+sudo k3s kubectl get services -n monitoring
+sudo k3s kubectl get ingress -n monitoring
+
+curl -kI --resolve grafana.local:443:127.0.0.1 https://grafana.local
+```
+
+Prometheus target validation from Compute:
+
+```bash
+sudo k3s kubectl get --raw '/api/v1/namespaces/monitoring/services/http:monitoring-kube-prometheus-prometheus:9090/proxy/api/v1/targets' | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(t["labels"].get("instance"), t["health"], t.get("lastError","")) for t in d["data"]["activeTargets"] if t["labels"].get("job")=="node-exporter"]'
+```
+
+Expected targets:
+
+- `192.168.56.11:9100` up
+- `192.168.56.12:9100` up
+
+An additional K3s-managed Compute target such as `10.0.2.15:9100` may also appear and is valid.
+
+## Troubleshooting
+
+Useful status and inspection commands:
+
+```bash
+vagrant status
+vagrant ssh controller
+vagrant ssh compute
+sudo systemctl status <service> --no-pager -l
+sudo journalctl -u <service> --no-pager -n 100
+sudo k3s kubectl get pods -n monitoring
+sudo k3s kubectl describe pod <pod-name> -n monitoring
+sudo k3s kubectl get events -n monitoring --sort-by=.lastTimestamp
+```
+
+A curl response with HTTP `302` and a `Location: /login` header confirms that the Grafana ingress is working.
+
+## Idempotency
+
+Re-run the node provisioning:
+
+```bash
+vagrant provision controller
+vagrant provision compute
+```
+
+Expected Salt result: `Failed: 0` and no changed states.
+
+Check monitoring pod identity, creation time, and restart count with:
+
+```bash
+sudo k3s kubectl get pods -n monitoring -o custom-columns='NAME:.metadata.name,UID:.metadata.uid,CREATED:.metadata.creationTimestamp,RESTARTS:.status.containerStatuses[*].restartCount'
+```
+
+Unchanged `UID` and `CREATED` values, together with zero additional restarts, confirm that the pods were not recreated.
+
+## Secret handling
+
+- Local Munge and MariaDB secrets are generated automatically by Vagrant when missing.
+- Real secret files are ignored by Git.
+- Only placeholder `.example` files are committed.
+- Grafana credentials live in a Kubernetes Secret.
+- Actual secret values must never be included in this README.
+
+## AI usage
+
+GitHub Copilot generated the Vagrant machine structure and resource allocation, Builder artifact automation, Controller and Compute Salt states, K3s and Helm automation, Prometheus additional scrape configuration, and Grafana ingress and dashboard provisioning. These generated components were used to make the multi-node environment reproducible, keep configuration data-driven, automate artifact creation, and provide repeatable observability deployment.
+
+Manual review and correction covered malformed Salt configuration, secret handling, Munge key length, the MariaDB Salt dependency, Slurm user ordering, cluster registration idempotency, rootless Podman, safe artifact export, K3s readiness, Helm retry and idempotency, dashboard provider configuration, dashboard revision 45, and node-exporter job-name compatibility. The review also preserved the Controller-without-Minion architecture, the Compute-only Salt Minion role, Builder shutdown behavior, and the boundary that Phase 4 and Phase 5 remain unimplemented.
+
+## Scope boundary
+
+Phase 4 Metrics Gateway Helm deployment and Phase 5 functional Slurm reporting remain outside the current implementation. No claim is made that the complete assignment is finished.
