@@ -39,6 +39,7 @@ Vagrant.configure("2") do |config|
 
       if machine[:name] == "controller"
         node.vm.synced_folder "./salt/roots", "/srv/salt"
+        node.vm.synced_folder "./salt/pillar", "/srv/pillar"
         node.vm.provision "salt" do |salt|
           salt.install_master = true
           salt.no_minion = true
@@ -47,10 +48,15 @@ Vagrant.configure("2") do |config|
           salt.verbose = true
           salt.master_config = "salt/config/controller-master"
         end
+        node.vm.provision "shell", privileged: true, inline: <<-SHELL
+          set -e
+          salt-call --local --id controller --file-root=/srv/salt --pillar-root=/srv/pillar --retcode-passthrough state.apply controller.bootstrap
+          salt-call --local --id controller --file-root=/srv/salt --pillar-root=/srv/pillar --retcode-passthrough state.highstate
+        SHELL
       elsif machine[:name] == "compute"
         node.vm.provision "salt" do |salt|
           salt.install_type = "stable"
-          salt.run_highstate = false
+          salt.run_highstate = true
           salt.verbose = true
           salt.minion_json_config = {
             "master" => controller[:ip],

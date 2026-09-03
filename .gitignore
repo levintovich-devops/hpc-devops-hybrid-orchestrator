@@ -1,3 +1,5 @@
 artifacts/*
 !artifacts/.gitkeep
 .vagrant/
+salt/pillar/phase2/common-secrets.sls
+salt/pillar/phase2/controller-secrets.sls

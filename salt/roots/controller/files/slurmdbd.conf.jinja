@@ -1,0 +1,13 @@
+AuthType=auth/munge
+DbdHost={{ salt['pillar.get']('phase2:common:controller_hostname') }}
+DbdAddr={{ salt['pillar.get']('phase2:common:controller_address') }}
+DbdPort={{ salt['pillar.get']('phase2:common:cluster:slurmdbd_port') }}
+SlurmUser={{ salt['pillar.get']('phase2:common:cluster:slurm_user') }}
+StorageType=accounting_storage/mysql
+StorageHost={{ salt['pillar.get']('phase2:controller:database:host') }}
+StoragePort={{ salt['pillar.get']('phase2:controller:database:port') }}
+StorageUser={{ salt['pillar.get']('phase2:controller:database:username') }}
+StoragePass={{ salt['pillar.get']('phase2:controller:database:password') }}
+StorageLoc={{ salt['pillar.get']('phase2:controller:database:name') }}
+LogFile={{ salt['pillar.get']('phase2:common:cluster:slurmdbd_log') }}
+PidFile=/run/slurmdbd.pid

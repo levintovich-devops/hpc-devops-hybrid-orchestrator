@@ -1,0 +1,14 @@
+[Unit]
+Description=Prometheus Node Exporter container
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/podman run --replace --name {{ salt['pillar.get']('phase2:controller:node_exporter:container_name') }} --publish {{ salt['pillar.get']('phase2:controller:node_exporter:port') }}:{{ salt['pillar.get']('phase2:controller:node_exporter:port') }} --pid host --volume /:/host:ro,rslave {{ salt['pillar.get']('phase2:controller:node_exporter:image') }} --path.rootfs=/host
+ExecStop=/usr/bin/podman stop --ignore --time 10 {{ salt['pillar.get']('phase2:controller:node_exporter:container_name') }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+ClusterName={{ salt['pillar.get']('phase2:common:cluster_name') }}
+SlurmctldHost={{ salt['pillar.get']('phase2:common:controller_hostname') }}({{ salt['pillar.get']('phase2:common:controller_address') }})
+SlurmctldPort={{ salt['pillar.get']('phase2:common:cluster:slurmctld_port') }}
+SlurmdPort={{ salt['pillar.get']('phase2:common:cluster:slurmd_port') }}
+SlurmUser={{ salt['pillar.get']('phase2:common:cluster:slurm_user') }}
+SlurmctldLogFile={{ salt['pillar.get']('phase2:common:cluster:slurmctld_log') }}
+SlurmdLogFile={{ salt['pillar.get']('phase2:common:cluster:slurmd_log') }}
+AuthType=auth/munge
+StateSaveLocation={{ salt['pillar.get']('phase2:common:cluster:state_save_directory') }}
+SlurmdSpoolDir={{ salt['pillar.get']('phase2:common:cluster:slurmd_spool_directory') }}
+SlurmctldPidFile=/run/slurmctld.pid
+SlurmdPidFile=/run/slurmd.pid
+ProctrackType=proctrack/linuxproc
+TaskPlugin=task/none
+SelectType=select/cons_tres
+AccountingStorageType=accounting_storage/slurmdbd
+AccountingStorageHost={{ salt['pillar.get']('phase2:common:controller_hostname') }}
+AccountingStoragePort={{ salt['pillar.get']('phase2:common:cluster:slurmdbd_port') }}
+NodeName={{ salt['pillar.get']('phase2:common:compute_hostname') }} NodeAddr={{ salt['pillar.get']('phase2:common:compute_address') }} CPUs={{ salt['pillar.get']('phase2:common:compute_cpus') }} State=UNKNOWN
+PartitionName=debug Nodes={{ salt['pillar.get']('phase2:common:compute_hostname') }} Default=YES MaxTime=INFINITE State=UP
