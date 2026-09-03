@@ -3,12 +3,11 @@ Vagrant.configure("2") do |config|
 
   machines = [
     { name: "builder", ip: "192.168.56.10", memory: 4096, cpus: 4 },
-    { name: "controller", ip: "192.168.56.11" },
-    { name: "compute", ip: "192.168.56.12" }
+    { name: "controller", ip: "192.168.56.11", memory: 2048, cpus: 2 },
+    { name: "compute", ip: "192.168.56.12", memory: 4096, cpus: 2 }
   ]
 
   controller = machines.find { |machine| machine[:name] == "controller" }
-  compute = machines.find { |machine| machine[:name] == "compute" }
 
   machines.each do |machine|
     config.vm.define machine[:name] do |node|
@@ -17,10 +16,8 @@ Vagrant.configure("2") do |config|
       node.vm.synced_folder "./artifacts", "/artifacts"
 
       node.vm.provider "virtualbox" do |vb|
-        if machine[:name] == "builder"
-          vb.memory = machine[:memory]
-          vb.cpus = machine[:cpus]
-        end
+        vb.memory = machine[:memory]
+        vb.cpus = machine[:cpus]
       end
 
       if machine[:name] == "builder"
@@ -41,33 +38,24 @@ Vagrant.configure("2") do |config|
       end
 
       if machine[:name] == "controller"
+        node.vm.synced_folder "./salt/roots", "/srv/salt"
         node.vm.provision "salt" do |salt|
           salt.install_master = true
           salt.no_minion = true
           salt.install_type = "stable"
           salt.run_highstate = false
           salt.verbose = true
-          salt.master_json_config = <<~JSON
-            {
-              "file_roots": {
-                "base": ["/srv/salt"]
-              },
-              "auto_accept": true,
-              "interface": "#{controller[:ip]}"
-            }
-          JSON
+          salt.master_config = "salt/config/controller-master"
         end
       elsif machine[:name] == "compute"
         node.vm.provision "salt" do |salt|
           salt.install_type = "stable"
           salt.run_highstate = false
           salt.verbose = true
-          salt.minion_json_config = <<~JSON
-            {
-              "master": "#{controller[:ip]}",
-              "id": "#{compute[:name]}"
-            }
-          JSON
+          salt.minion_json_config = {
+            "master" => controller[:ip],
+            "id" => machine[:name]
+          }.to_json
         end
       end
     end
