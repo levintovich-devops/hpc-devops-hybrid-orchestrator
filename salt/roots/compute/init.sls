@@ -4,3 +4,4 @@ include:
   - compute.slurm
   - compute.k3s
   - compute.observability
+  - compute.metrics-gateway

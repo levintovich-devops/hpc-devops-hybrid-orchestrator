@@ -1,0 +1,29 @@
+replicaCount: 1
+
+image:
+  repository: localhost/metrics-gateway
+  tag: "0.1.0"
+  archiveSignature: ""
+  pullPolicy: Never
+
+service:
+  type: ClusterIP
+  port: 8080
+
+containerPort: 8080
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  labels:
+    release: monitoring
+
+podSecurityContext: {}
+
+securityContext:
+  runAsUser: 10001
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

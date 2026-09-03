@@ -10,3 +10,4 @@ base:
     - phase2.common
     - phase2.common-secrets
     - observability
+    - metrics-gateway
