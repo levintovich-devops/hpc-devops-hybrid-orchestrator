@@ -9,3 +9,4 @@ base:
   'compute':
     - phase2.common
     - phase2.common-secrets
+    - observability
