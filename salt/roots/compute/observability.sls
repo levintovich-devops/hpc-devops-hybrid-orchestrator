@@ -65,13 +65,14 @@ monitoring-namespace:
             default:
               node-exporter-full:
                 gnetId: {{ grafana['dashboard_id'] }}
+                revision: {{ grafana['dashboard_revision'] }}
                 datasource: Prometheus
         prometheus:
           service:
             port: {{ prometheus['service_port'] }}
           prometheusSpec:
             additionalScrapeConfigs:
-              - job_name: node-exporters
+              - job_name: node-exporter
                 static_configs:
                   - targets:
                       - {{ (controller_address ~ ':' ~ node_exporter_port) | json }}

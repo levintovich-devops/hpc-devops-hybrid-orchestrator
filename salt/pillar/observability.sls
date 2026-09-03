@@ -17,5 +17,6 @@ observability:
       service_port: 3000
       ingress_entrypoint: websecure
       dashboard_id: 1860
+      dashboard_revision: 45
     prometheus:
       service_port: 9090
