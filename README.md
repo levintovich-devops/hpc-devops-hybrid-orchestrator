@@ -14,113 +14,65 @@ The full technical assignment is a future-state design and automation plan, not 
 
 ## 2. Current implementation status
 
-The verified implementation includes the Vagrant three-node environment, the Builder Slurm DEB build path, and the verified Metrics Gateway image build and export. It does not claim that the full Phase 1 workflow is complete.
+Phase 1: Environment & Artifacts is complete and verified.
 
-Verified facts:
+Verified Phase 1 results:
 
-- Vagrant 2.4.9 was installed.
-- Three Ubuntu 22.04 VMs were created and are configured on the same private network.
-- The node IPs are:
+- Three Ubuntu 22.04 Vagrant nodes exist on a private network with static IPs:
   - builder: 192.168.56.10
   - controller: 192.168.56.11
   - compute: 192.168.56.12
-- `vagrant validate` completed successfully.
-- `vagrant up` created all three VMs.
-- `vagrant status` showed all three machines running.
-- Full network connectivity was tested in every direction with zero packet loss.
-- `./artifacts` is mounted as `/artifacts` on all three nodes and was tested from builder, controller, and compute.
-- `vagrant halt` is the supported command to stop the environment.
-- Builder uses Vagrant's built-in Salt provisioner in masterless mode because the builder must configure itself before the controller is started.
-- Salt installs the base build packages from Pillar.
-- Salt installs Podman.
-- Salt creates `/artifacts/slurm-debs` and `/artifacts/images`.
-- Builder is configured with 4096 MB RAM and 4 CPUs in the Vagrant machines data structure.
-- The original VM had about 1 GB RAM and 2 CPUs.
-- Resources were increased to support reliable Slurm source compilation.
-- Verification after `vagrant reload` showed 4 CPUs and 3.8 GiB RAM.
-- The verified Slurm 26.05.3 DEB build was produced on Builder.
-- The Builder Slurm build is run with:
-
-```bash
-vagrant provision builder
-```
-
-- The build uses parallel compilation across all Builder CPUs with:
+- Controller and Compute are provisioned using Vagrant's built-in Salt provisioner.
+- Controller runs Salt Master using `salt/config/controller-master` with `auto_accept` enabled.
+- Controller Salt Master was verified active.
+- Controller Salt version `3008.2 Argon` was verified.
+- Compute runs Salt Minion and receives the Controller IP from the Vagrant machines data structure.
+- Compute Salt Minion was verified active.
+- Controller successfully received `compute: True` from `salt 'compute' test.ping`.
+- Builder installs build dependencies and Podman.
+- Builder compiles Slurm 26.05.3 into separate DEB packages.
+- Builder exports the Slurm DEBs and the `SHA256SUMS` file to the shared artifacts directory.
+- Builder builds and exports the Metrics Gateway image archive.
+- Builder stores all artifacts in `/artifacts` and retains them in the shared artifacts directory.
+- Builder automatically powers off after successful provisioning.
+- Resource allocation is verified as:
+  - Builder: 4096 MB RAM, 4 CPUs
+  - Controller: 2048 MB RAM, 2 CPUs
+  - Compute: 4096 MB RAM, 2 CPUs
+- The Controller Slurm daemons, Controller Podman, Compute `slurmd`, and K3s are target node roles identified in Phase 1. Their installation and configuration belong to Phase 2 and Phase 3 as explicitly described in `TASK.md`.
+- The verified Slurm build uses parallel compilation across all Builder CPUs with:
 
 ```bash
 debuild -b -uc -us -j$(nproc)
 ```
 
-- Generated artifacts are stored in both locations:
+- The verified Slurm artifact directory is:
 
 ```text
 host: artifacts/slurm-debs/26.05.3
 VM: /artifacts/slurm-debs/26.05.3
 ```
 
-- The checksum verification command is:
-
-```bash
-vagrant ssh builder -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256SUMS"
-```
-
-- Every DEB must return `OK` during checksum verification.
-- All generated DEBs passed checksum verification.
-- The `.complete` marker prevents the Slurm build from being rebuilt unnecessarily.
-- The idempotency rerun completed with `Failed: 0` and no changes.
-- The initial Builder highstate succeeded with `Succeeded: 4`, `Changed: 4`, and `Failed: 0`.
-- The first idempotency rerun exposed the Windows shared-folder permission problem and failed for two directory mode checks.
-- After removing `dir_mode`, the final rerun completed with `Succeeded: 4`, `Failed: 0`, and no changes, confirming idempotency.
-- The verified Metrics Gateway image is `localhost/metrics-gateway:0.1.0`.
-- The Builder image build is triggered automatically with:
-
-```bash
-vagrant provision builder
-```
-
-- The Podman build runs rootless as the Pillar-defined `vagrant` user.
-- Generated image artifacts are stored in both locations:
+- The verified Metrics Gateway image archive location is:
 
 ```text
 host: artifacts/images/metrics-gateway-0.1.0.tar
 VM: /artifacts/images/metrics-gateway-0.1.0.tar
 ```
 
-- The archive verification command is:
-
-```bash
-podman load --input /artifacts/images/metrics-gateway-0.1.0.tar
-```
-
 - `PUT /update-metric` returned `200`.
 - `GET /metrics` returned valid Prometheus text format.
 - Invalid metric names returned `400`.
-- Repeated provisioning made no changes.
-- The SHA256 of the tar was identical before and after rerunning provisioning.
-- The complete Builder workflow is:
-
-```bash
-vagrant up builder --provision
-```
-
-- Vagrant starts Builder, runs the Salt highstate, completes artifact provisioning, and then runs the Builder-specific after `:up` trigger.
-- The trigger executes inside Builder:
-
-```bash
-sudo systemctl poweroff --no-block
-```
-
-- The verified final state was: `builder poweroff (virtualbox)`.
-- `vagrant provision builder` is only usable while Builder is already running.
-- The Phase 1 Builder artifact workflow is now complete.
+- Repeated Builder provisioning produced no changes. The SHA256 hash of the Metrics Gateway image archive remained identical before and after the rerun.
+- The Builder automatic shutdown was verified and the final VM state was `builder poweroff (virtualbox)`.
 
 ## 3. Node table
 
-| Name | IP Address | Planned role |
+| Name | IP Address | Current Phase 1 state |
 | --- | --- | --- |
-| builder | 192.168.56.10 | Build host for artifacts and packaging |
-| controller | 192.168.56.11 | Planned Salt master and central orchestration node |
-| compute | 192.168.56.12 | Planned execution node and K3s host |
+| builder | 192.168.56.10 | Artifact build completed; VM automatically powered off |
+| controller | 192.168.56.11 | Salt Master; running |
+| compute | 192.168.56.12 | Salt Minion; running |
 
 ## 4. Prerequisites
 
@@ -138,95 +90,62 @@ winget install Hashicorp.Vagrant
 vagrant --version
 ```
 
-## 5. Operational commands
+## 5. Phase 1 deployment
 
 From the repository root:
 
-### Validate the Vagrantfile
-
 ```bash
 vagrant validate
-```
-
-### Builder provisioning
-
-```bash
-vagrant up builder --provision
-```
-
-- This single command starts Builder, runs the complete Salt artifact workflow, and automatically powers Builder off after success.
-- `vagrant provision builder` can only be used when Builder is already running.
-
-### Start the environment
-
-```bash
-vagrant up
-```
-
-### Check machine state
-
-```bash
+vagrant up --provision
 vagrant status
 ```
 
-### Connect to a node over SSH
+Expected final state:
+
+- builder: poweroff
+- controller: running
+- compute: running
+
+### Validation commands
 
 ```bash
-vagrant ssh builder
-vagrant ssh controller
-vagrant ssh compute
+vagrant ssh controller -c "sudo systemctl is-active salt-master"
+vagrant ssh compute -c "sudo systemctl is-active salt-minion"
+vagrant ssh controller -c "sudo salt 'compute' test.ping"
+vagrant ssh controller -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256SUMS"
+vagrant ssh controller -c "test -s /artifacts/images/metrics-gateway-0.1.0.tar && echo 'Metrics Gateway image archive: OK'"
 ```
 
-### Test network connectivity
+Expected results:
 
-```bash
-vagrant ssh builder -c "ping -c 2 192.168.56.11 && ping -c 2 192.168.56.12"
-vagrant ssh controller -c "ping -c 2 192.168.56.10 && ping -c 2 192.168.56.12"
-vagrant ssh compute -c "ping -c 2 192.168.56.10 && ping -c 2 192.168.56.11"
-```
+- Salt Master and Salt Minion return `active`.
+- Salt `test.ping` returns `compute: True`.
+- Every Slurm DEB checksum returns `OK`.
+- The Metrics Gateway image archive check returns `OK`.
 
-These checks were performed successfully with zero packet loss in all directions.
-
-### Verify Slurm DEB artifacts
-
-```bash
-vagrant ssh builder -c "cd /artifacts/slurm-debs/26.05.3 && sha256sum -c SHA256SUMS"
-```
-
-Every DEB must return `OK`.
-
-### Verify Metrics Gateway image archive
-
-```bash
-vagrant ssh builder -c "podman load --input /artifacts/images/metrics-gateway-0.1.0.tar"
-```
-
-The archive should load successfully and expose the `localhost/metrics-gateway:0.1.0` image.
-
-### Stop the environment
-
-```bash
-vagrant halt
-```
+`vagrant provision builder` can only be used while Builder is already running.
 
 ## 6. Not implemented yet
 
-The following items are not implemented in the current verified state and should not be interpreted as complete:
+The following Phase 2 and later work is not implemented and should not be interpreted as complete:
 
-- Controller and Compute Salt orchestration
-- Slurm installation
+- Controller Podman and Node Exporter
+- MariaDB
+- synchronized Munge
+- Slurm installation and configuration
+- slurmctld, slurmdbd, and slurmd
 - K3s
-- Prometheus
-- Grafana
-- Metrics Gateway service deployment
+- Prometheus and Grafana
+- Metrics Gateway Helm deployment
+- Phase 5 Slurm reporting job
 
-The current repository state demonstrates the Vagrant foundation, verified Builder bootstrap, verified Slurm 26.05.3 DEB packaging on Builder, and verified Metrics Gateway image build/export automation. The Phase 1 Builder artifact workflow is complete, and the remaining infrastructure and application layers described in `TASK.md` are still pending. Controller, compute, and later phases are not complete.
+No later component is claimed as implemented.
 
 ## 7. AI usage
 
-GitHub Copilot generated the data-driven Vagrant machine loop and Builder resource configuration. The loop was used to avoid duplicated VM definitions and allocate sufficient Builder resources. It also generated the Gateway build context and Salt image automation. The Gateway image automation was used to produce a reproducible versioned artifact for later Helm deployment after Builder shutdown. The shutdown trigger was generated to release Builder resources after artifact creation. Manual review corrected `trigger.run` to `trigger.run_remote` so shutdown runs inside Builder instead of on the Windows host. The output was manually reviewed and corrected for the API output, labels, required `import sys`, duplicated values, unsafe export handling, and rootful Podman execution. The Slurm automation was used to make source compilation reproducible, validate package integrity, export reusable DEBs, and avoid unnecessary rebuilds. The output was manually reviewed and corrected for version deduplication, noninteractive dependency installation, parallel compilation, required-package validation, checksums, and idempotency. The unauthorized external `vagrant-salt` plugin was removed, and malformed JSON configuration and shared-folder permission handling were corrected before acceptance.
+GitHub Copilot generated the data-driven Vagrant machine definitions, resource allocation, Salt provisioning configuration, Builder states, Slurm build automation, Metrics Gateway build context, image export workflow, and automatic Builder shutdown trigger. These changes were used to eliminate duplicated configuration, make artifact production reproducible, and ensure that Builder releases its resources after completing the builds. All generated code was manually reviewed and tested. Manual corrections included replacing `trigger.run` with `trigger.run_remote`, removing the unapproved external `vagrant-salt` plugin, fixing malformed Salt JSON configuration, handling Windows shared-folder permissions, deriving repeated values from Pillar, enabling noninteractive and parallel Slurm compilation, validating required DEB packages and checksums, exporting the container image safely through a temporary file, producing valid Prometheus metrics with labels, adding the required `import sys`, and running the Podman image build rootless as the Pillar-defined `vagrant` user after the rootful build failed. Idempotency was verified by rerunning the Salt provisioning and confirming that no unnecessary rebuilds or artifact changes occurred.
 
 ## 8. Summary
 
-This repository currently contains a verified three-node Ubuntu Vagrant environment with a shared private network and working inter-node connectivity. It does not yet implement the complete distributed HPC + observability architecture described in the assignment, and no claim is made that the full technical assignment is finished.
+Phase 1: Environment & Artifacts is complete and verified. The Builder artifact workflow and Controller/Compute Salt provisioning are in place and validated. The remaining work is limited to the Phase 2 and later components described in `TASK.md`.
 
