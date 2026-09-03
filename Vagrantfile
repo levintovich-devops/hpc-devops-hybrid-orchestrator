@@ -1,5 +1,49 @@
+require "securerandom"
+require "fileutils"
+
+def ensure_secret_file(path, contents)
+  return if File.exist?(path)
+
+  directory = File.dirname(path)
+  temporary_path = File.join(directory, ".#{File.basename(path)}.#{Process.pid}.#{SecureRandom.hex(8)}.tmp")
+
+  begin
+    File.open(temporary_path, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+      file.write(contents)
+      file.flush
+      file.fsync
+    end
+
+    begin
+      File.link(temporary_path, path)
+    rescue Errno::EEXIST
+      nil
+    ensure
+      FileUtils.rm_f(temporary_path)
+    end
+  ensure
+    FileUtils.rm_f(temporary_path)
+  end
+end
+
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/jammy64"
+
+  config.trigger.before [:up, :provision] do |trigger|
+    trigger.ruby do
+      pillar_directory = File.join(__dir__, "salt", "pillar", "phase2")
+      FileUtils.mkdir_p(pillar_directory)
+
+      ensure_secret_file(
+        File.join(pillar_directory, "common-secrets.sls"),
+        "phase2:\n  common:\n    munge:\n      key: \"#{SecureRandom.hex(64)}\"\n"
+      )
+      ensure_secret_file(
+        File.join(pillar_directory, "controller-secrets.sls"),
+        "phase2:\n  controller:\n    database:\n      password: \"#{SecureRandom.urlsafe_base64(32)}\"\n"
+      )
+    end
+  end
 
   machines = [
     { name: "builder", ip: "192.168.56.10", memory: 4096, cpus: 4 },
