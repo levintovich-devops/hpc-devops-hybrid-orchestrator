@@ -4,6 +4,7 @@ metadata:
   name: {{ include "metrics-gateway.fullname" . }}
   labels:
     {{- include "metrics-gateway.labels" . | nindent 4 }}
+    {{ .Values.serviceMonitor.monitoringLabel }}: "true"
 spec:
   type: {{ .Values.service.type }}
   selector:
@@ -13,3 +14,22 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
       protocol: TCP
+---
+{{- if .Values.nodePort.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "metrics-gateway.fullname" . }}-nodeport
+  labels:
+    {{- include "metrics-gateway.labels" . | nindent 4 }}
+spec:
+  type: NodePort
+  selector:
+    {{- include "metrics-gateway.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.nodePort.port }}
+      targetPort: http
+      nodePort: {{ .Values.nodePort.nodePort }}
+      protocol: TCP
+{{- end }}

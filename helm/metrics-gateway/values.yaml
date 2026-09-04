@@ -10,13 +10,24 @@ service:
   type: ClusterIP
   port: 8080
 
+nodePort:
+  enabled: true
+  port: 8080
+  nodePort: 30080
+
 containerPort: 8080
+
+metrics:
+  cpu: slurm_job_cpu_load
+  gpu: slurm_job_gpu_load
+  memory: slurm_job_memory_load
 
 serviceMonitor:
   enabled: true
   interval: 30s
   labels:
     release: monitoring
+  monitoringLabel: metrics-gateway-monitor
 
 podSecurityContext: {}
 

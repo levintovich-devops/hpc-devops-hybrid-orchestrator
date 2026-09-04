@@ -10,6 +10,7 @@ spec:
   selector:
     matchLabels:
       {{- include "metrics-gateway.selectorLabels" . | nindent 6 }}
+      {{ .Values.serviceMonitor.monitoringLabel }}: "true"
   endpoints:
     - port: http
       path: /metrics

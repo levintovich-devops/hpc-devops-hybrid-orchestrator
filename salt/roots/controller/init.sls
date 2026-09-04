@@ -4,3 +4,4 @@ include:
   - controller.podman
   - controller.mariadb
   - controller.slurm
+  - controller.slurm-reporting

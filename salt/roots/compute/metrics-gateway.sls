@@ -5,6 +5,7 @@
 {% set chart = gateway['chart'] %}
 {% set service = gateway['service'] %}
 {% set monitor = gateway['service_monitor'] %}
+{% set reporting = salt['pillar.get']('slurm_reporting') %}
 {% set image_ref = image['repository'] ~ ':' ~ image['tag'] %}
 {% set archive_path = artifact['root'] ~ '/' ~ image['name'] ~ '-' ~ image['tag'] ~ '.tar' %}
 {% set values_path = '/var/lib/rancher/k3s/metrics-gateway-values.yaml' %}
@@ -23,12 +24,21 @@ metrics-gateway-values:
         service:
           type: ClusterIP
           port: {{ service['port'] }}
+        nodePort:
+          enabled: {{ service['node_port_enabled'] | lower }}
+          port: {{ service['port'] }}
+          nodePort: {{ service['node_port'] }}
         containerPort: {{ service['container_port'] }}
+        metrics:
+          cpu: {{ reporting['metrics']['cpu'] | json }}
+          gpu: {{ reporting['metrics']['gpu'] | json }}
+          memory: {{ reporting['metrics']['memory'] | json }}
         serviceMonitor:
           enabled: {{ monitor['enabled'] | lower }}
           interval: {{ monitor['interval'] | json }}
           labels:
             release: {{ monitor['release_label'] | json }}
+          monitoringLabel: {{ monitor['monitoring_label'] | json }}
     - user: root
     - group: root
     - mode: 0644

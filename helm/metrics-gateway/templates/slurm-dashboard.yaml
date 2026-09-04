@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "metrics-gateway.fullname" . }}-slurm-dashboard
+  labels:
+    {{- include "metrics-gateway.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  live-slurm-job-load.json: |-
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "graphTooltip": 1,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 10,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "expr": "{{ .Values.metrics.cpu }}{job_id=~\"$job_id\",node=~\"$node\"}",
+              "legendFormat": "CPU",
+              "refId": "A"
+            },
+            {
+              "expr": "{{ .Values.metrics.gpu }}{job_id=~\"$job_id\",node=~\"$node\"}",
+              "legendFormat": "GPU",
+              "refId": "B"
+            },
+            {
+              "expr": "{{ .Values.metrics.memory }}{job_id=~\"$job_id\",node=~\"$node\"}",
+              "legendFormat": "Memory",
+              "refId": "C"
+            }
+          ],
+          "title": "Live Slurm Job Load",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 39,
+      "uid": "live-slurm-job-load",
+      "templating": {
+        "list": [
+          {
+            "allValue": ".*",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "includeAll": true,
+            "label": "Job ID",
+            "name": "job_id",
+            "query": "label_values({{ .Values.metrics.cpu }}, job_id)",
+            "refresh": 2,
+            "type": "query"
+          },
+          {
+            "allValue": ".*",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "includeAll": true,
+            "label": "Node",
+            "name": "node",
+            "query": "label_values({{ .Values.metrics.cpu }}, node)",
+            "refresh": 2,
+            "type": "query"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-15m",
+        "to": "now"
+      },
+      "title": "Live Slurm Job Load",
+      "timezone": "browser",
+      "version": 1
+    }

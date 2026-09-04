@@ -1,0 +1,46 @@
+#!/bin/sh
+#SBATCH --job-name=slurm-reporting
+#SBATCH --time=00:02:00
+#SBATCH --output=/var/log/slurm/slurm-reporting-%j.out
+
+set -eu
+
+if [ -z "${SLURM_JOB_ID:-}" ]; then
+    echo "slurm-reporting: SLURM_JOB_ID is missing" >&2
+    exit 1
+fi
+if [ -z "${SLURMD_NODENAME:-}" ]; then
+    echo "slurm-reporting: SLURMD_NODENAME is missing" >&2
+    exit 1
+fi
+
+gateway_url="http://{{ salt['pillar.get']('phase2:common:compute_address') }}:{{ salt['pillar.get']('metrics_gateway:service:node_port') }}{{ salt['pillar.get']('slurm_reporting:gateway_path') }}"
+iterations=$(({{ salt['pillar.get']('slurm_reporting:duration_seconds') }} / {{ salt['pillar.get']('slurm_reporting:interval_seconds') }}))
+
+random_load() {
+    awk 'BEGIN { srand(); printf "%.2f %.2f %.2f\n", rand() * 100, rand() * 100, rand() * 100 }'
+}
+
+iteration=0
+while [ "$iteration" -lt "$iterations" ]; do
+    set -- $(random_load)
+    cpu_load=$1
+    gpu_load=$2
+    memory_load=$3
+
+    for metric in \
+        "{{ salt['pillar.get']('slurm_reporting:metrics:cpu') }}|$cpu_load" \
+        "{{ salt['pillar.get']('slurm_reporting:metrics:gpu') }}|$gpu_load" \
+        "{{ salt['pillar.get']('slurm_reporting:metrics:memory') }}|$memory_load"; do
+        metric_name=${metric%%|*}
+        metric_value=${metric#*|}
+        payload=$(printf '{"metric_name":"%s","value":%s,"labels":{"job_id":"%s","node":"%s"}}' \
+            "$metric_name" "$metric_value" "$SLURM_JOB_ID" "$SLURMD_NODENAME")
+        curl --fail --silent --show-error --request PUT \
+            --header 'Content-Type: application/json' \
+            --data "$payload" "$gateway_url"
+    done
+
+    iteration=$((iteration + 1))
+    sleep {{ salt['pillar.get']('slurm_reporting:interval_seconds') }}
+done
