@@ -14,6 +14,10 @@
 {% set metrics_gateway_build_user = metrics_gateway.get('build_user', '') %}
 {% set metrics_gateway_artifact_path = metrics_gateway_artifact_root ~ '/' ~ metrics_gateway_image_name ~ '-' ~ metrics_gateway_image_tag ~ '.tar' %}
 
+salt-minion:
+  service.dead:
+    - enable: false
+
 builder_packages:
   pkg.installed:
     - pkgs: {{ builder_packages }}
