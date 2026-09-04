@@ -1,4 +1,4 @@
-{% set salt_mysql = salt['pillar.get']('phase2:controller:salt_mysql') %}
+{% set salt_mysql = salt['pillar.get']('infrastructure:controller:salt_mysql') %}
 
 salt-mysql-bootstrap:
   cmd.run:

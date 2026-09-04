@@ -1,5 +1,5 @@
-{% set slurm = salt['pillar.get']('phase2:common:slurm') %}
-{% set cluster = salt['pillar.get']('phase2:common:cluster') %}
+{% set slurm = salt['pillar.get']('infrastructure:common:slurm') %}
+{% set cluster = salt['pillar.get']('infrastructure:common:cluster') %}
 {% set artifact_dir = slurm['artifact_root'] ~ '/' ~ slurm['version'] %}
 {% set version = slurm['version'] %}
 {% set architecture = grains['osarch'] %}

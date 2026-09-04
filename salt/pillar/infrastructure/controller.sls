@@ -1,4 +1,4 @@
-phase2:
+infrastructure:
   controller:
     database:
       name: slurm_acct_db

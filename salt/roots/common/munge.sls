@@ -1,6 +1,6 @@
-{% set munge = salt['pillar.get']('phase2:common:munge') %}
+{% set munge = salt['pillar.get']('infrastructure:common:munge') %}
 {% set munge_package = munge['package'] %}
-{% set munge_key = salt['pillar.get']('phase2:common:munge:key') %}
+{% set munge_key = salt['pillar.get']('infrastructure:common:munge:key') %}
 
 munge-package:
   pkg.installed:

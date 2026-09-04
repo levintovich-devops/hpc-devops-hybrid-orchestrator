@@ -1,4 +1,4 @@
-phase2:
+infrastructure:
   common:
     cluster_name: hpc-lab
     cluster:

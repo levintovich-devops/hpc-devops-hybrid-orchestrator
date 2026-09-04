@@ -32,16 +32,16 @@ Vagrant.configure("2") do |config|
 
   config.trigger.before [:up, :provision] do |trigger|
     trigger.ruby do
-      pillar_directory = File.join(__dir__, "salt", "pillar", "phase2")
+      pillar_directory = File.join(__dir__, "salt", "pillar", "infrastructure")
       FileUtils.mkdir_p(pillar_directory)
 
       ensure_secret_file(
         File.join(pillar_directory, "common-secrets.sls"),
-        "phase2:\n  common:\n    munge:\n      key: \"#{SecureRandom.hex(64)}\"\n"
+        "infrastructure:\n  common:\n    munge:\n      key: \"#{SecureRandom.hex(64)}\"\n"
       )
       ensure_secret_file(
         File.join(pillar_directory, "controller-secrets.sls"),
-        "phase2:\n  controller:\n    database:\n      password: \"#{SecureRandom.urlsafe_base64(32)}\"\n"
+        "infrastructure:\n  controller:\n    database:\n      password: \"#{SecureRandom.urlsafe_base64(32)}\"\n"
       )
     end
   end

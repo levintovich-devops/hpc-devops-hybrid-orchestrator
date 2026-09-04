@@ -1,5 +1,5 @@
-{% set slurm = salt['pillar.get']('phase2:common:slurm') %}
-{% set cluster = salt['pillar.get']('phase2:common:cluster') %}
+{% set slurm = salt['pillar.get']('infrastructure:common:slurm') %}
+{% set cluster = salt['pillar.get']('infrastructure:common:cluster') %}
 {% set artifact_dir = slurm['artifact_root'] ~ '/' ~ slurm['version'] %}
 {% set version = slurm['version'] %}
 {% set architecture = grains['osarch'] %}
@@ -70,8 +70,8 @@ slurm-controller-packages:
 
 slurm-cluster-registration:
   cmd.run:
-    - name: sacctmgr -i add cluster {{ salt['pillar.get']('phase2:common:cluster_name') }}
-    - unless: sacctmgr --noheader --parsable2 show cluster {{ salt['pillar.get']('phase2:common:cluster_name') }} format=Cluster | grep -Fqx "{{ salt['pillar.get']('phase2:common:cluster_name') }}"
+    - name: sacctmgr -i add cluster {{ salt['pillar.get']('infrastructure:common:cluster_name') }}
+    - unless: sacctmgr --noheader --parsable2 show cluster {{ salt['pillar.get']('infrastructure:common:cluster_name') }} format=Cluster | grep -Fqx "{{ salt['pillar.get']('infrastructure:common:cluster_name') }}"
     - require:
         - service: slurmdbd
         - pkg: slurm-controller-packages

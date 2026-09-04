@@ -1,5 +1,5 @@
-{% set podman = salt['pillar.get']('phase2:controller:podman') %}
-{% set exporter = salt['pillar.get']('phase2:controller:node_exporter') %}
+{% set podman = salt['pillar.get']('infrastructure:controller:podman') %}
+{% set exporter = salt['pillar.get']('infrastructure:controller:node_exporter') %}
 
 controller-podman:
   pkg.installed:

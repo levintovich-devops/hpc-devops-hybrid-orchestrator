@@ -1,15 +1,15 @@
 {% set controller = salt['pillar.get']('topology:nodes:controller') %}
 {% set compute = salt['pillar.get']('topology:nodes:compute') %}
-ClusterName={{ salt['pillar.get']('phase2:common:cluster_name') }}
+ClusterName={{ salt['pillar.get']('infrastructure:common:cluster_name') }}
 SlurmctldHost={{ controller['hostname'] }}({{ controller['ip'] }})
-SlurmctldPort={{ salt['pillar.get']('phase2:common:cluster:slurmctld_port') }}
-SlurmdPort={{ salt['pillar.get']('phase2:common:cluster:slurmd_port') }}
-SlurmUser={{ salt['pillar.get']('phase2:common:cluster:slurm_user') }}
-SlurmctldLogFile={{ salt['pillar.get']('phase2:common:cluster:slurmctld_log') }}
-SlurmdLogFile={{ salt['pillar.get']('phase2:common:cluster:slurmd_log') }}
+SlurmctldPort={{ salt['pillar.get']('infrastructure:common:cluster:slurmctld_port') }}
+SlurmdPort={{ salt['pillar.get']('infrastructure:common:cluster:slurmd_port') }}
+SlurmUser={{ salt['pillar.get']('infrastructure:common:cluster:slurm_user') }}
+SlurmctldLogFile={{ salt['pillar.get']('infrastructure:common:cluster:slurmctld_log') }}
+SlurmdLogFile={{ salt['pillar.get']('infrastructure:common:cluster:slurmd_log') }}
 AuthType=auth/munge
-StateSaveLocation={{ salt['pillar.get']('phase2:common:cluster:state_save_directory') }}
-SlurmdSpoolDir={{ salt['pillar.get']('phase2:common:cluster:slurmd_spool_directory') }}
+StateSaveLocation={{ salt['pillar.get']('infrastructure:common:cluster:state_save_directory') }}
+SlurmdSpoolDir={{ salt['pillar.get']('infrastructure:common:cluster:slurmd_spool_directory') }}
 SlurmctldPidFile=/run/slurmctld.pid
 SlurmdPidFile=/run/slurmd.pid
 ProctrackType=proctrack/linuxproc
@@ -17,6 +17,6 @@ TaskPlugin=task/none
 SelectType=select/cons_tres
 AccountingStorageType=accounting_storage/slurmdbd
 AccountingStorageHost={{ controller['hostname'] }}
-AccountingStoragePort={{ salt['pillar.get']('phase2:common:cluster:slurmdbd_port') }}
+AccountingStoragePort={{ salt['pillar.get']('infrastructure:common:cluster:slurmdbd_port') }}
 NodeName={{ compute['hostname'] }} NodeAddr={{ compute['ip'] }} CPUs={{ compute['cpus'] }} State=UNKNOWN
 PartitionName=debug Nodes={{ compute['hostname'] }} Default=YES MaxTime=INFINITE State=UP

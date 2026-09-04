@@ -1,4 +1,4 @@
-{% set database = salt['pillar.get']('phase2:controller:database') %}
+{% set database = salt['pillar.get']('infrastructure:controller:database') %}
 
 mariadb-packages:
   pkg.installed:
