@@ -1,6 +1,7 @@
+{% set controller = salt['pillar.get']('topology:nodes:controller') %}
 AuthType=auth/munge
-DbdHost={{ salt['pillar.get']('phase2:common:controller_hostname') }}
-DbdAddr={{ salt['pillar.get']('phase2:common:controller_address') }}
+DbdHost={{ controller['hostname'] }}
+DbdAddr={{ controller['ip'] }}
 DbdPort={{ salt['pillar.get']('phase2:common:cluster:slurmdbd_port') }}
 SlurmUser={{ salt['pillar.get']('phase2:common:cluster:slurm_user') }}
 StorageType=accounting_storage/mysql

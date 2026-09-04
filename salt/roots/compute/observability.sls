@@ -2,8 +2,8 @@
 {% set monitoring = salt['pillar.get']('observability:monitoring') %}
 {% set grafana = monitoring['grafana'] %}
 {% set prometheus = monitoring['prometheus'] %}
-{% set controller_address = salt['pillar.get']('phase2:common:controller_address') %}
-{% set compute_address = salt['pillar.get']('phase2:common:compute_address') %}
+{% set controller_address = salt['pillar.get']('topology:nodes:controller:ip') %}
+{% set compute_address = salt['pillar.get']('topology:nodes:compute:ip') %}
 {% set node_exporter_port = monitoring['node_exporter_port'] %}
 helm-install:
   cmd.run:

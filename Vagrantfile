@@ -1,5 +1,6 @@
 require "securerandom"
 require "fileutils"
+require "yaml"
 
 def ensure_secret_file(path, contents)
   return if File.exist?(path)
@@ -45,17 +46,32 @@ Vagrant.configure("2") do |config|
     end
   end
 
-  machines = [
-    { name: "builder", ip: "192.168.56.10", memory: 4096, cpus: 4 },
-    { name: "controller", ip: "192.168.56.11", memory: 2048, cpus: 2 },
-    { name: "compute", ip: "192.168.56.12", memory: 4096, cpus: 2 }
-  ]
+  topology_path = File.join(__dir__, "salt", "pillar", "topology.sls")
+  topology = YAML.safe_load(File.read(topology_path), aliases: false)
+  topology_section = topology.fetch("topology") { raise "Missing topology section" }
+  nodes = topology_section.fetch("nodes") { raise "Missing topology nodes section" }
+  required_nodes = %w[builder controller compute]
+  required_fields = %w[hostname ip memory cpus]
+
+  machines = required_nodes.map do |name|
+    node = nodes.fetch(name) { raise "Missing topology node: #{name}" }
+    required_fields.each do |field|
+      node.fetch(field) { raise "Missing topology field: topology.nodes.#{name}.#{field}" }
+    end
+    {
+      name: name,
+      hostname: node.fetch("hostname"),
+      ip: node.fetch("ip"),
+      memory: node.fetch("memory"),
+      cpus: node.fetch("cpus")
+    }
+  end
 
   controller = machines.find { |machine| machine[:name] == "controller" }
 
   machines.each do |machine|
     config.vm.define machine[:name] do |node|
-      node.vm.hostname = machine[:name]
+      node.vm.hostname = machine[:hostname]
       node.vm.network "private_network", ip: machine[:ip]
       node.vm.synced_folder "./artifacts", "/artifacts"
 
@@ -73,7 +89,7 @@ Vagrant.configure("2") do |config|
           salt.run_highstate = true
           salt.verbose = true
           salt.minion_config = "salt/config/builder-minion"
-          salt.minion_id = machine[:name]
+          salt.minion_id = machine[:hostname]
         end
         node.trigger.after :up do |trigger|
           trigger.only_on = "builder"
@@ -104,7 +120,7 @@ Vagrant.configure("2") do |config|
           salt.verbose = true
           salt.minion_json_config = {
             "master" => controller[:ip],
-            "id" => machine[:name]
+            "id" => machine[:hostname]
           }.to_json
         end
       end

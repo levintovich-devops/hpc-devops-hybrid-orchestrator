@@ -1,14 +1,18 @@
+{% import_yaml "topology.sls" as topology %}
+
 base:
-  'builder':
+  '*':
+    - topology
+  '{{ topology['topology']['nodes']['builder']['hostname'] }}':
     - builder
-  'controller':
+  '{{ topology['topology']['nodes']['controller']['hostname'] }}':
     - phase2.common
     - phase2.common-secrets
     - phase2.controller
     - phase2.controller-secrets
     - metrics-gateway
     - slurm_reporting
-  'compute':
+  '{{ topology['topology']['nodes']['compute']['hostname'] }}':
     - phase2.common
     - phase2.common-secrets
     - observability

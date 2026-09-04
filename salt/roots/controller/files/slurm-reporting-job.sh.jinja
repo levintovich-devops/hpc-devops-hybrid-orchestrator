@@ -14,7 +14,7 @@ if [ -z "${SLURMD_NODENAME:-}" ]; then
     exit 1
 fi
 
-gateway_url="http://{{ salt['pillar.get']('phase2:common:compute_address') }}:{{ salt['pillar.get']('metrics_gateway:service:node_port') }}{{ salt['pillar.get']('slurm_reporting:gateway_path') }}"
+gateway_url="http://{{ salt['pillar.get']('topology:nodes:compute:ip') }}:{{ salt['pillar.get']('metrics_gateway:service:node_port') }}{{ salt['pillar.get']('slurm_reporting:gateway_path') }}"
 iterations=$(({{ salt['pillar.get']('slurm_reporting:duration_seconds') }} / {{ salt['pillar.get']('slurm_reporting:interval_seconds') }}))
 
 random_load() {
