@@ -1,46 +1,34 @@
 # HPC DevOps Hybrid Orchestrator
 
-## Quick access
-
 Grafana: https://grafana.local
-
-A reproducible three-node HPC lab that combines Vagrant, Salt, Slurm, K3s, Prometheus, Grafana, and a Metrics Gateway for automated job-load reporting.
-
-## Status
-
-Phases 1-5 are complete and verified.
-
-## Architecture
-
-| Node | Address | Role |
-| --- | --- | --- |
-| Builder | 192.168.56.10 | Temporary artifact builder; powers off after builds |
-| Controller | 192.168.56.11 | Salt Master, Slurm controller, database, and job submitter |
-| Compute | 192.168.56.12 | Only Salt Minion, Slurm compute node, K3s, Prometheus, and Grafana |
 
 ## Prerequisites
 
+- Git
 - Vagrant
 - VirtualBox
-- Git
 
-## Deploy
+## Quick Start
 
-From a clean clone:
+From Windows PowerShell, run:
 
 ```powershell
-vagrant up --provision
+git clone https://github.com/levintovich-devops/hpc-devops-hybrid-orchestrator.git
+Set-Location .\hpc-devops-hybrid-orchestrator
+vagrant up
 ```
 
-Expected state:
+Expected final VM state:
 
 ```text
-builder     poweroff
-controller  running
-compute     running
+Builder:    powered off
+Controller: running
+Compute:    running
 ```
 
-## Grafana
+Grafana may require several additional minutes after `vagrant up` finishes successfully while Grafana and the monitoring pods become ready. Refresh Chrome as needed.
+
+## Grafana Access
 
 Open Windows PowerShell as Administrator and configure the hosts file:
 
@@ -52,34 +40,35 @@ if (-not (Select-String -Path $hostsFile -Pattern '^\s*192\.168\.56\.12\s+grafan
 ipconfig /flushdns
 ```
 
-Chrome may show a certificate warning for the private lab certificate. Then open [https://grafana.local](https://grafana.local).
+Open https://grafana.local in Chrome. A certificate warning may appear for the private lab certificate.
 
-From Windows, connect to Compute:
+From Windows PowerShell, connect to Compute:
 
 ```powershell
 vagrant ssh compute
 ```
 
-Inside Compute, retrieve the Grafana username and password from Kubernetes:
+Retrieve the Grafana admin username and password from the Kubernetes Secret:
 
 ```bash
 sudo k3s kubectl get secret monitoring-grafana -n monitoring -o jsonpath='{.data.admin-user}' | base64 -d; echo
 sudo k3s kubectl get secret monitoring-grafana -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d; echo
 ```
 
-Available dashboards:
+## Expected Result
 
-- **Node Exporter Full**
-- **Live Slurm Job Load**
+After deployment, Grafana displays Node Exporter metrics for both infrastructure nodes and simulated Slurm job metrics.
 
-## Stop
+![Node Exporter dashboard for Controller](docs/images/node-exporter-controller.png)
 
-```powershell
-vagrant halt
-```
+![Node Exporter dashboard for Compute](docs/images/node-exporter-compute.png)
 
-See [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) for implementation details, validation commands, troubleshooting, and idempotency checks. See [docs/TASK.md](docs/TASK.md) for the project task definition.
+The following dashboard was captured after stopping and restarting the environment. The gap shows the shutdown period, while the new series confirm that scheduled Slurm reporting resumed successfully.
 
-## AI usage
+![Live Slurm Job Load after restart](docs/images/live-slurm-job-load.png)
 
-GitHub Copilot assisted with implementation and documentation. Human review verified the architecture, automation, security boundaries, and validation guidance.
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Implementation](docs/IMPLEMENTATION.md)
+- [Task](docs/TASK.md)
