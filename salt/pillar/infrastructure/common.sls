@@ -3,6 +3,7 @@ infrastructure:
     cluster_name: hpc-lab
     cluster:
       slurm_user: slurm
+      return_to_service: 2
       slurmctld_port: 6817
       slurmd_port: 6818
       slurmdbd_port: 6819

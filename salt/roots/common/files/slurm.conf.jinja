@@ -5,6 +5,7 @@ SlurmctldHost={{ controller['hostname'] }}({{ controller['ip'] }})
 SlurmctldPort={{ salt['pillar.get']('infrastructure:common:cluster:slurmctld_port') }}
 SlurmdPort={{ salt['pillar.get']('infrastructure:common:cluster:slurmd_port') }}
 SlurmUser={{ salt['pillar.get']('infrastructure:common:cluster:slurm_user') }}
+ReturnToService={{ salt['pillar.get']('infrastructure:common:cluster:return_to_service') }}
 SlurmctldLogFile={{ salt['pillar.get']('infrastructure:common:cluster:slurmctld_log') }}
 SlurmdLogFile={{ salt['pillar.get']('infrastructure:common:cluster:slurmd_log') }}
 AuthType=auth/munge
