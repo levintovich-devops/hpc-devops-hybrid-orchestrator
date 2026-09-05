@@ -63,7 +63,7 @@ After deployment, Grafana displays Node Exporter metrics for both infrastructure
 
 ![Node Exporter dashboard for Compute](docs/images/node-exporter-compute.png)
 
-The following dashboard was captured after stopping and restarting the environment. The gap shows the shutdown period, while the new series confirm that scheduled Slurm reporting resumed successfully.
+The Live Slurm Job Load dashboard displays simulated CPU, GPU, and memory metrics reported by scheduled Slurm jobs.
 
 ![Live Slurm Job Load after restart](docs/images/live-slurm-job-load.png)
 
